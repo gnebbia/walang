@@ -50,12 +50,12 @@ public class TestExampleLang extends ExampleLangTest {
     attacker.addAttackPoint(model.admin1pass.obtain);
     attacker.attack();
 
-    //model.server.access.assertCompromisedWithEffort();
     model.admin_area.access.assertCompromisedInstantaneously();
   }
 
   @Test
   public void testNoPassword() {
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
     var model = new ExampleLangModel();
 
     var attacker = new Attacker();
