@@ -18,8 +18,36 @@
 
 category WebSystem {
 
-  asset WebServer { }
-  // maybe here we should put vulns related to the webserver
+  asset WebServer { 
+    | compromise
+  }
+
+  asset WebServerConfiguration { 
+    | tlsDisabled
+        -> webserver.dataflows.eavesdrop,
+           webserver.dataflows.manInTheMiddle,
+           cookieEavesdrop
+    # encryption
+        -> tlsDisabled
+
+    | xssProtectionDisabled
+        -> webserver.webapplication.xss
+    # xssProtectionEnabled
+        -> xssProtectionDisabled
+
+    | xFrameOptionsDisabled
+        -> webserver.webapplication.clickjacking
+    # xFrameOptionsEnabled
+        -> xFrameOptionsDisabled
+
+    | secureFlagDisabled
+        -> cookieEavesdrop
+    # secureFlagEnabled
+        -> secureFlagDisabled
+
+    & cookieEavesdrop
+        
+  }
 
 
   asset DataFlow {
@@ -34,8 +62,6 @@ category WebSystem {
         -> data.read,
            data.write,
            data.delete
-    # encryption
-        -> eavesdrop
   }
 
   asset Data {
@@ -45,16 +71,32 @@ category WebSystem {
   }
 
 
-  asset Vulnerability {
-    | clickjacking
-    | xss
-    | sqlinjection
+  asset URL { }
+
+  asset PrivateURL extends URL { 
+    | discover
+      -> access,
+         connect
+    | connect
+      -> access
+    & access
   }
 
-  asset DataBase { }
 
-  asset WebApplication { }
+  asset DataBase { 
+    | read
+        -> data.read
+    | write
+        -> data.write
+    | delete
+        -> data.delete
+  }
 
+  asset WebApplication { 
+    | clickjacking
+    | xss
+    | abusePrivileges
+  }
 
 
   asset SecurityToken {
@@ -66,20 +108,24 @@ category WebSystem {
 
   asset Cookie extends SecurityToken { }
 
-  asset URL { }
 
-  asset InputField { }
+  asset InputField { 
+    | discover
+        -> fuzz
+    | fuzz
+        -> sqlinjection,
+           xss
+    | sqlinjection [Exponential(0.02)]
+        -> url.webapplication.dbs.read,
+           url.webapplication.dbs.write,
+           url.webapplication.dbs.delete
+    | xss
+        -> url.webapplication.abusePrivileges
+  }
 
 
-  asset DBInteractionInputField extends InputField { }
-
-  asset ReflectedInputField extends InputField { }
 
   asset Resource { }
-
-  asset SensitiveFile extends Resource{ }
-
-  asset SensitiveResource extends Resource{ }
 
 
   asset AdminArea {
@@ -97,6 +143,12 @@ category WebSystem {
     & access
   }
 
+  asset Account {
+    | authenticate
+  }
+
+  asset Administrator extends Account{ }
+
   asset User {
     | attemptPhishing
       -> phish
@@ -104,25 +156,16 @@ category WebSystem {
       -> account.tokens.obtain
   }
 
-  asset Account {
-    | authenticate
-  }
-
-
-//  asset Privilege {
-//    | compromise
-//  }
-
-
-  asset Administrator extends Account{ }
-
 }
 
 associations {
   WebServer[webserver]           1    <--    Hosts          -->    1 [webapplication]WebApplication
-  WebServer[webserver]           1    <--    Vulnerable     -->    * [vulnerabilities]Vulnerability
 
-  WebApplication[webapplication] 1    <--    Composed       -->    * [urls]URL
+  WebServer[webserver]           1    <--    Configuration  -->    1 [config]WebServerConfiguration
+  WebServer[webserver]           1    <--    Transmission   -->    * [dataflows]DataFlow
+
+
+  WebApplication[webapplication] 1    <--    Compose        -->    * [urls]URL
   WebApplication[webapplication] 1    <--    DataStore      -->    * [dbs]DataBase
 
   WebApplication[webapplication] 1    <--    Usage          -->    * [users]User
@@ -137,8 +180,15 @@ associations {
   User[user]                     1    <--    Communication  -->    1 [dataflow]DataFlow
   
   Account[account]               1    <--    Credentials    -->    * [tokens]SecurityToken
+  Account[account]               1    <--    Resources      -->    * [privateurls]PrivateURL
 
   DataFlow[dataflow]             1    <--    Transmission   -->    * [data]Data
+  DataBase[db]                   1    <--    DataStore      -->    * [data]Data
 }
 
 
+
+
+// [ANALYZER ERROR] <walang.mal:111:12> Field 'dbs' not defined for asset 'InputField'
+// [ANALYZER ERROR] <walang.mal:112:12> Field 'dbs' not defined for asset 'InputField'
+// [ANALYZER ERROR] <walang.mal:113:12> Field 'dbs' not defined for asset 'InputField'

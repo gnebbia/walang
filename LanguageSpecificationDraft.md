@@ -1,4 +1,4 @@
-# Classes
+# Assets
 SecurityToken
     Credentials
     Cookies
