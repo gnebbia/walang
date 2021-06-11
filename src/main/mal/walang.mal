@@ -19,22 +19,54 @@
 category WebSystem {
 
   asset WebServer { }
+  // maybe here we should put vulns related to the webserver
+
+
+  asset DataFlow {
+    | eavesdrop
+        user info: "An attacker eavesdrops the data flow, can access the contained data."
+        -> data.read
+    | denialOfService
+        user info: "A denial-of-service-attack on the dataflow makes the contained data inaccessible."
+        -> data.delete
+    | manInTheMiddle
+        user info: "A man-in-the-middle attack on the dataflow allows different operation on data."
+        -> data.read,
+           data.write,
+           data.delete
+    # encryption
+        -> eavesdrop
+  }
+
+  asset Data {
+    | read
+    | write
+    | delete
+  }
+
+
+  asset Vulnerability {
+    | clickjacking
+    | xss
+    | sqlinjection
+  }
 
   asset DataBase { }
 
   asset WebApplication { }
 
 
+
   asset SecurityToken {
     | obtain
-      -> user.authenticate
+      -> account.authenticate
   }
 
-  asset Password extends SecurityToken{ }
+  asset Password extends SecurityToken { }
 
-  asset Cookie extends SecurityToken{ }
+  asset Cookie extends SecurityToken { }
 
-  asset WebPage { }
+  asset URL { }
 
   asset InputField { }
 
@@ -43,10 +75,7 @@ category WebSystem {
 
   asset ReflectedInputField extends InputField { }
 
-
-
   asset Resource { }
-
 
   asset SensitiveFile extends Resource{ }
 
@@ -72,40 +101,44 @@ category WebSystem {
     | attemptPhishing
       -> phish
     | phish [Exponential(0.1)]
-      -> tokens.obtain
+      -> account.tokens.obtain
+  }
+
+  asset Account {
     | authenticate
   }
 
 
-  asset Administrator extends User{ }
+//  asset Privilege {
+//    | compromise
+//  }
+
+
+  asset Administrator extends Account{ }
 
 }
 
 associations {
   WebServer[webserver]           1    <--    Hosts          -->    1 [webapplication]WebApplication
+  WebServer[webserver]           1    <--    Vulnerable     -->    * [vulnerabilities]Vulnerability
 
-  WebApplication[webapplication] 1    <--    Composed       -->    * [webpages]WebPage
+  WebApplication[webapplication] 1    <--    Composed       -->    * [urls]URL
   WebApplication[webapplication] 1    <--    DataStore      -->    * [dbs]DataBase
-//  WebApplication[webapplication] 1    <--    Protection     -->    1 [waf]WAF
 
   WebApplication[webapplication] 1    <--    Usage          -->    * [users]User
-//  WebApplication[webapplication] 1    <--    Management     -->    * [admin]Administrator
   WebApplication[webapplication] 1    <--    Administered   -->    1 [adminarea]AdminArea
 
-  WebPage[webpage]               1    <--    Contains       -->    * [inputfields]InputField
-  WebPage[webpage]               1    <--    Owns           -->    * [resources]Resource
+  URL[url]                       1    <--    Contains       -->    * [inputfields]InputField
+  URL[url]                       1    <--    Owns           -->    * [resources]Resource
 
   AdminArea[adminarea]           1    <--    Administration -->    * [administrators]Administrator
 
-//   Administrator[admin]           1    <--    Credentials    -->    * [tokens]SecurityToken
+  User[user]                     1    <--    UserAccount    -->    1 [account]Account
+  User[user]                     1    <--    Communication  -->    1 [dataflow]DataFlow
+  
+  Account[account]               1    <--    Credentials    -->    * [tokens]SecurityToken
 
-  User[user]                     1    <--    Credentials    -->    * [tokens]SecurityToken
+  DataFlow[dataflow]             1    <--    Transmission   -->    * [data]Data
 }
 
-
-
-// ERRORS:
-// [ANALYZER ERROR] <walang.mal:73:10> Field 'passwords' not defined for asset 'User'
-// [ANALYZER ERROR] <walang.mal:90:18> Field Administrator.webapplication previously defined for asset at <walang.mal:89:18>
-// [ANALYZER ERROR] <walang.mal:98:71> Field Administrator.tokens previously defined for asset at <walang.mal:100:71>
 

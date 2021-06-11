@@ -41,6 +41,7 @@ public class TestExampleLang extends ExampleLangTest {
 
   @Test
   public void testAccess() {
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
     var model = new ExampleLangModel();
 
     var attacker = new Attacker();
