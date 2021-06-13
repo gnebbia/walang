@@ -27,11 +27,19 @@ public class TestXSS extends WaLangTest {
     public final Endpoint searchEndpoint = new Endpoint("/search.jsp");
     public final InputField iFieldSearch = new InputField("query");
 
+    // Instantiate an Endpoint with a Correctly Sanitized Field
+    public final Endpoint contactUsEndpoint = new Endpoint("/search.jsp");
+    public final InputField iFieldEmail = new InputField("email",true);
+
 
     public XSSModel() {
       server.addWebapplication(app);
+
       app.addEndpoints(searchEndpoint);
+      app.addEndpoints(contactUsEndpoint);
+
       searchEndpoint.addInputfields(iFieldSearch);
+      contactUsEndpoint.addInputfields(iFieldEmail);
     }
   }
 
@@ -55,6 +63,28 @@ public class TestXSS extends WaLangTest {
     attacker.attack();
 
     model.iFieldSearch.xss.assertCompromisedWithEffort();
+  }
+
+  @Test
+  public void testFuzzSanitizedInputForXSS() {
+    /*
+     * TestFuzzSanitizedInputForXSS
+     * In this case an attacker has direct access to an endpoint
+     * discovers one of its input fields, tries to fuzz
+     * but cannot perform XSS because the input is sanitized
+     */
+    
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
+    var model = new XSSModel();
+
+    var attacker = new Attacker();
+    attacker.addAttackPoint(model.contactUsEndpoint.access);
+
+    attacker.addAttackPoint(model.iFieldEmail.discover);
+    attacker.addAttackPoint(model.iFieldEmail.fuzz);
+    attacker.attack();
+
+    model.iFieldEmail.xss.assertUncompromised();
   }
 
 }

@@ -57,7 +57,7 @@ category WebSystem {
   asset WebServerConfiguration 
   user info: "A WebServer has a configuration that can be useful to set some security-related options."
   { 
-    | tlsDisabled
+    & tlsDisabled
         user info: "If TLS is disabled, encryption for data is not available."
         -> webserver.dataflows.eavesdrop,
            webserver.dataflows.manInTheMiddle,
@@ -66,14 +66,14 @@ category WebSystem {
         user info: "Enabling appropriate encryption prevents all threats associated to transmission of plaintext data."
         -> tlsDisabled
 
-    | xFrameOptionsDisabled
+    & xFrameOptionsDisabled
         user info: "If the X-Frame-Options header is disabled the Web Application is vulnerable to clickjacking attacks."
         -> webserver.webapplication.clickjacking
     # xFrameOptionsEnabled
         user info: "If the X-Frame-Options header is enabled the Web Application cannot be embedded into a frame hence it is not vulnerable to clickjacking attacks."
         -> xFrameOptionsDisabled
 
-    | secureFlagDisabled
+    & secureFlagDisabled
         user info: "If cookies are not set with the 'secure' flag, they may be eavesdropped."
         -> cookieEavesdrop
     # secureFlagEnabled
@@ -223,14 +223,19 @@ category WebSystem {
         -> sqlinjection,
            xss
 
-    | sqlinjection [Exponential(0.02)]
+    & sqlinjection [Exponential(0.02)]
         user info: "SQL Injection allows access to the database associated to the Web Application."
         -> dbs.read,
            dbs.write,
            dbs.delete
-    | xss [Exponential(0.05)]
+    & xss [Exponential(0.05)]
         user info: "XSS allows to abuse privileges related to other users."
         -> webapplication.abusePrivileges
+
+    # sanitizedInput
+        user info: "If the input is sanitized, exploits cannot be executed"
+        -> sqlinjection,
+           xss
 
   }
 
