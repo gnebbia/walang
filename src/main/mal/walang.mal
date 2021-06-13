@@ -306,7 +306,7 @@ associations {
   WebApplication[webapplication] 1    <--    Administration -->    1 [adminarea]AdminArea
   WebApplication[webapplication] 1    <--    Containment    -->    * [inputfields]InputField
 
-  Endpoint[url]                  1    <--    Contains       -->    * [inputfields]InputField
+  Endpoint[url]                  1    <--    Containment    -->    * [inputfields]InputField
 
 
   InputField[inputfield]         1    <--    Interact       -->    * [dbs]DataBase
