@@ -7,11 +7,9 @@ This project has the following structure:
 
 * The file `pom.xml` is the Maven configuration file of the project.
 * The directory `src/main/mal` contains the MAL specification
-  `walang.mal`, which is the MAL specification of walang.
-* The directory `src/main/resources/icons` contains SVG icons for the
-  assets in exampleLang.
+  `walang.mal`, which is the MAL specification of **walang**.
 * The directory `src/test/java/ml/gnebbia/walang/test`
-  contains the unit tests of walang.
+  contains the unit tests of **walang**.
 
 
 ## Testing walang with example test cases

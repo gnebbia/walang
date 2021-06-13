@@ -24,6 +24,7 @@ category WebSystem {
       | dosVulnerability
           user info: "A denial-of-service vulnerability makes the data unavailable."
           -> data.unavailable
+
       | rceVulnerability
           user info: "A remote code execution vulnerability allows to execute commands on the webserver."
           -> privilegedCodeExecution,
@@ -31,6 +32,7 @@ category WebSystem {
              data.write,
              data.delete,
              data.unavailable
+
       | privescVulnerability
           user info: "A privilege escalation vulnerability allows to execute commands as the administrator (e.g., root)."
           -> privilegedCodeExecution
@@ -38,6 +40,7 @@ category WebSystem {
           user info: "If the server is fully patched then it is not vulnerable to known weaknesses."
           -> dosVulnerability,
              rceVulnerability
+
       & privilegedCodeExecution
           user info: "A privileged code execution is obtained only if there is a remote code execution vulnerability coupled with a Privilege Escalation vulnerability"
   }
@@ -53,13 +56,6 @@ category WebSystem {
     # encryption
         user info: "Enabling appropriate encryption prevents all threats associated to transmission of plaintext data."
         -> tlsDisabled
-
-    | xssProtectionDisabled
-        user info: "If the X-XSS-Protection header is disabled the web Application may be more likely open to XSS attacks"
-        -> webserver.webapplication.xss
-    # xssProtectionEnabled
-        user info: "If the X-XSS-Protection header is enabled the web Application is protected from certain kinds of XSS attacks."
-        -> xssProtectionDisabled
 
     | xFrameOptionsDisabled
         user info: "If the X-Frame-Options header is disabled the Web Application is vulnerable to clickjacking attacks."
@@ -90,19 +86,21 @@ category WebSystem {
   }
 
   asset DataFlow 
-  user info: "A DataFlow represents data that is transmitted."
+  user info: "A DataFlow represents data that is in transit (e.g., transmitted/received)."
   {
-    | eavesdrop
+    & eavesdrop
         user info: "An attacker that eavesdrops the dataflow can access the contained data."
-        -> transmittedData.read
+        -> dataInTransit.read
+
+    & manInTheMiddle
+        user info: "A man-in-the-middle attack on the dataflow allows different operation on data."
+        -> dataInTransit.read,
+           dataInTransit.write,
+           dataInTransit.delete
+
     | denialOfService
         user info: "A denial-of-service attack on the dataflow makes the contained data inaccessible."
-        -> transmittedData.delete
-    | manInTheMiddle
-        user info: "A man-in-the-middle attack on the dataflow allows different operation on data."
-        -> transmittedData.read,
-           transmittedData.write,
-           transmittedData.delete
+        -> dataInTransit.delete
   }
 
   asset DataBase
@@ -110,20 +108,31 @@ category WebSystem {
   { 
     | read
         -> databaseData.read
+
     | write
         -> databaseData.write
+
     | delete
         -> databaseData.delete
   }
 
   asset Endpoint
-  user info: "An endpoint is a resource or an URL within a Web Application."
+  user info: "An endpoint is a resource or a URL within a Web Application."
   {
     | discover
         -> access,
            connect
+    # notLinked
+        -> discover
+
+    | attemptBruteforce
+        -> bruteforce
+    | bruteforce [Exponential(0.02)]
+        -> connect
+
     | connect
         -> access
+
     & access
         -> inputfields.discover
   }
@@ -132,9 +141,11 @@ category WebSystem {
   user info: "A PrivateEndpoint is a resource or an URL within a Web Application accessible only to a specific logged-on user."
   developer info: "An example may be an URL containing sensitive info related to the logged-on user."
   { 
-     
     & access
-        -> privilegeMisconfiguration
+        +> privilegeMisconfiguration
+    # enforceAccessControl
+    user info: "Enforcing Access Control prevents Broken Authorization weaknesses."
+        -> access
     | privilegeMisconfiguration
         -> account.infoDisclosure
   }
@@ -151,10 +162,21 @@ category WebSystem {
            adminarea.discover,
            endpoints[PrivateEndpoint].discover
     | clickjacking
-    | xss
     | abusePrivileges
     | infoDisclosure
     | deface
+
+    E firewallExists
+        <- firewall
+        -> firewall.bypass
+
+    !E firewallDoesNotExist
+        <- firewall
+        -> firewallBypassed
+
+    | firewallBypassed
+        -> inputfields.sqlinjection,
+           inputfields.xss
   }
 
 
@@ -188,6 +210,8 @@ category WebSystem {
         user info: "Extensive Fuzzing could lead to the exploitation of different vulnerabilities."
         -> sqlinjection,
            xss
+
+
     | sqlinjection [Exponential(0.02)]
         user info: "SQL Injection allows access to the database associated to the Web Application."
         -> dbs.read,
@@ -198,16 +222,18 @@ category WebSystem {
         -> webapplication.abusePrivileges
   }
 
+  asset WebApplicationFirewall
+      user info: "If a WebApplicationFirewall (WAF) is set-up it can help mitigate injection vulnerabilities."
+  {
+      & bypass [Bernoulli(0.2)]
+          -> webapplication.firewallBypassed
+      # hardened
+          -> bypass
+  }
 
 
-  // asset Resource
-  // user info: "A resource represents a file, a webpage or any other media that can be accessed from the Web Application."
-  // { 
-  //   // intentionally left blank
-  // }
 
-
-  asset AdminArea 
+  asset AdminArea
   user info: "An AdminArea represents the area of Application where administrators its administrators can log-in."
   {
     | discover
@@ -234,10 +260,12 @@ category WebSystem {
   user info: "An Account represents something that can be used to log-in."
   {
     | authenticate
-    | impersonate
-    // maybe add abuseprivileges?
+        -> privateinfo.read,
+           privateinfo.write,
+           privateinfo.delete
     | infoDisclosure
-    // maybe add data.read ??
+        user info: "Information Disclosure in this context not only allows to read private information but also to access private resources of a user."
+        -> privateinfo.read
   }
 
   asset Administrator extends Account
@@ -259,16 +287,15 @@ category WebSystem {
 
 associations {
   WebServer[webserver]           1    <--    Hosts          -->    1 [webapplication]WebApplication
-
   WebServer[webserver]           1    <--    Configuration  -->    1 [config]WebServerConfiguration
   WebServer[webserver]           1    <--    Transmission   -->    * [dataflows]DataFlow
   WebServer[webserver]           1    <--    RetrieveInfo   -->    * [data]Data
 
 
   WebApplication[webapplication] 1    <--    Compose        -->    * [endpoints]Endpoint
-
   WebApplication[webapplication] 1    <--    Administration -->    1 [adminarea]AdminArea
   WebApplication[webapplication] 1    <--    Containment    -->    * [inputfields]InputField
+  WebApplication[webapplication] *    <--    Protect        --> 0..1 [firewall] WebApplicationFirewall
 
   Endpoint[url]                  1    <--    Contains       -->    * [inputfields]InputField
 
@@ -282,12 +309,8 @@ associations {
   
   Account[account]               1    <--    Credentials    -->    * [tokens]SecurityToken
   Account[account]               1    <--    Resources      -->    * [privateurls]PrivateEndpoint
+  Account[account]               1    <--    Resources      -->    * [privateinfo]Data
 
-  DataFlow[dataflow]             1    <--    Transmission   -->    * [transmittedData]Data
+  DataFlow[dataflow]             1    <--    Transmission   -->    * [dataInTransit]Data
   DataBase[db]                   1    <--    DataStore      -->    * [databaseData]Data
 }
-
-
-
-// [ANALYZER WARNING] <walang.mal:274:3> Association 'Endpoint [url] <-- Contains --> InputField [inputfields]' is never used
-// [ANALYZER WARNING] <walang.mal:283:3> Association 'User [user] <-- Transmission --> DataFlow [dataflow]' is never used
