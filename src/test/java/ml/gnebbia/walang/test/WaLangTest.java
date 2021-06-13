@@ -20,7 +20,7 @@ import core.AttackStep;
 import core.Defense;
 import org.junit.jupiter.api.AfterEach;
 
-public class ExampleLangTest {
+public class WaLangTest {
   @AfterEach
   public void deleteModel() {
     Asset.allAssets.clear();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Foreseeti AB
+ * Copyright 2020 Giuseppe Nebbione
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ package ml.gnebbia.walang.test;
 import core.Attacker;
 import org.junit.jupiter.api.Test;
 
-public class TestExampleLang extends ExampleLangTest {
-  private static class ExampleLangModel {
+public class TestAdminAreaLogin extends WaLangTest {
+  private static class AdminAreaLoginModel {
     public final WebServer server = new WebServer("gnebbia.ml");
     public final WebApplication app = new WebApplication("personalwebsite");
 
@@ -31,7 +31,7 @@ public class TestExampleLang extends ExampleLangTest {
     public final User user2 = new User("andrea");
     public final Password user2pass = new Password("p4ssw0rd");
 
-    public ExampleLangModel() {
+    public AdminAreaLoginModel() {
       server.addWebapplication(app);
       app.addAdminarea(admin_area);
       admin_area.addAdministrators(admin1);
@@ -40,9 +40,9 @@ public class TestExampleLang extends ExampleLangTest {
   }
 
   @Test
-  public void testAccess() {
+  public void testAccessWithObtainedPassword() {
     System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
-    var model = new ExampleLangModel();
+    var model = new AdminAreaLoginModel();
 
     var attacker = new Attacker();
     attacker.addAttackPoint(model.admin_area.access);
@@ -54,9 +54,9 @@ public class TestExampleLang extends ExampleLangTest {
   }
 
   @Test
-  public void testNoPassword() {
+  public void testForbiddenAccessWithNoPassword() {
     System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
-    var model = new ExampleLangModel();
+    var model = new AdminAreaLoginModel();
 
     var attacker = new Attacker();
     attacker.addAttackPoint(model.admin_area.discover);
@@ -66,15 +66,3 @@ public class TestExampleLang extends ExampleLangTest {
   }
 
 }
-
-// [ERROR] /home/giuseppe/mal/walang/src/test/java/ml/gnebbia/walang/test/TestExampleLang.java:[53,16] error: cannot find symbol
-// [ERROR]   symbol:   variable access
-// [ERROR]   location: variable server of type WebServer
-// [ERROR] /home/giuseppe/mal/walang/src/test/java/ml/gnebbia/walang/test/TestExampleLang.java:[61,33] error: cannot find symbol
-// [ERROR]   symbol:   variable adminarea
-// [ERROR]   location: variable model of type ExampleLangModel
-// [ERROR] /home/giuseppe/mal/walang/src/test/java/ml/gnebbia/walang/test/TestExampleLang.java:[64,16] error: cannot find symbol
-// [ERROR]   symbol:   variable access
-// [ERROR]   location: variable server of type WebServer
-// [ERROR] -> [Help 1]
-// [ERROR]

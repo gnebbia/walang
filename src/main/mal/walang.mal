@@ -165,18 +165,8 @@ category WebSystem {
     | abusePrivileges
     | infoDisclosure
     | deface
+    
 
-    E firewallExists
-        <- firewall
-        -> firewall.bypass
-
-    !E firewallDoesNotExist
-        <- firewall
-        -> firewallBypassed
-
-    | firewallBypassed
-        -> inputfields.sqlinjection,
-           inputfields.xss
   }
 
 
@@ -211,25 +201,18 @@ category WebSystem {
         -> sqlinjection,
            xss
 
-
     | sqlinjection [Exponential(0.02)]
         user info: "SQL Injection allows access to the database associated to the Web Application."
         -> dbs.read,
            dbs.write,
            dbs.delete
-    | xss [Exponential(0.02)]
+    | xss [Exponential(0.05)]
         user info: "XSS allows to abuse privileges related to other users."
         -> webapplication.abusePrivileges
+
   }
 
-  asset WebApplicationFirewall
-      user info: "If a WebApplicationFirewall (WAF) is set-up it can help mitigate injection vulnerabilities."
-  {
-      & bypass [Bernoulli(0.2)]
-          -> webapplication.firewallBypassed
-      # hardened
-          -> bypass
-  }
+
 
 
 
@@ -295,7 +278,6 @@ associations {
   WebApplication[webapplication] 1    <--    Compose        -->    * [endpoints]Endpoint
   WebApplication[webapplication] 1    <--    Administration -->    1 [adminarea]AdminArea
   WebApplication[webapplication] 1    <--    Containment    -->    * [inputfields]InputField
-  WebApplication[webapplication] *    <--    Protect        --> 0..1 [firewall] WebApplicationFirewall
 
   Endpoint[url]                  1    <--    Contains       -->    * [inputfields]InputField
 
