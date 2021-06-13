@@ -94,15 +94,15 @@ category WebSystem {
   {
     | eavesdrop
         user info: "An attacker that eavesdrops the dataflow can access the contained data."
-        -> data.read
+        -> transmittedData.read
     | denialOfService
         user info: "A denial-of-service attack on the dataflow makes the contained data inaccessible."
-        -> data.delete
+        -> transmittedData.delete
     | manInTheMiddle
         user info: "A man-in-the-middle attack on the dataflow allows different operation on data."
-        -> data.read,
-           data.write,
-           data.delete
+        -> transmittedData.read,
+           transmittedData.write,
+           transmittedData.delete
   }
 
   asset DataBase
@@ -283,7 +283,7 @@ associations {
   Account[account]               1    <--    Credentials    -->    * [tokens]SecurityToken
   Account[account]               1    <--    Resources      -->    * [privateurls]PrivateEndpoint
 
-  DataFlow[dataflow]             1    <--    Transmission   -->    * [data]Data
+  DataFlow[dataflow]             1    <--    Transmission   -->    * [transmittedData]Data
   DataBase[db]                   1    <--    DataStore      -->    * [databaseData]Data
 }
 
