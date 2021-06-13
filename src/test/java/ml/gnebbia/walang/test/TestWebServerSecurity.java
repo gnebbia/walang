@@ -21,7 +21,14 @@ import org.junit.jupiter.api.Test;
 public class TestWebServerSecurity extends WaLangTest {
   private static class WebServerSecurityModel {
     public final WebServer vulnerableWebServer = new WebServer("server1");
-    public final WebServer fullyPatchedWebServer = new WebServer("secure_server", true);
+
+    // instantiate a secure webserver
+    boolean isFullyPatched= true;
+    boolean isEncryptionEnabled = true;
+    boolean isXFrameOptionsEnabled = true;
+    boolean isSecureFlagEnabled = true;
+
+    public final WebServer fullyPatchedWebServer = new WebServer("secure_server", isFullyPatched, isEncryptionEnabled, isXFrameOptionsEnabled, isSecureFlagEnabled);
     public final WebApplication app = new WebApplication("ExampleWebServerSecurityApp");
 
     
@@ -73,5 +80,81 @@ public class TestWebServerSecurity extends WaLangTest {
     attacker.attack();
 
     model.fullyPatchedWebServer.privilegedCodeExecution.assertUncompromised();
+  }
+
+  @Test
+  public void testPlainTextWebServerEavesDrop() {
+    /*
+     * testPlainTextWebServerEavesDrop
+     * In this case an attacker takes advantage of disabled TLS 
+     * to intercept communication
+     */
+    
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
+    var model = new WebServerSecurityModel();
+
+    var attacker = new Attacker();
+    attacker.addAttackPoint(model.vulnerableWebServer.attemptSniff);
+
+    attacker.attack();
+
+    model.vulnerableWebServer.sniff.assertCompromisedInstantaneously();
+  }
+
+  @Test
+  public void testTLSEnabledWebServerEavesDrop() {
+    /*
+     * testTLSEnabledWebServerEavesDrop     
+     * In this case an attacker cannot take advantage plaintext
+     * to intercept communication, because the webserver has TLS enabled
+     */
+    
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
+    var model = new WebServerSecurityModel();
+
+    var attacker = new Attacker();
+    attacker.addAttackPoint(model.fullyPatchedWebServer.attemptSniff);
+
+    attacker.attack();
+
+    model.fullyPatchedWebServer.sniff.assertUncompromised();
+  }
+
+  @Test
+  public void testClickJackingOnVulnerableWebServer() {
+    /*
+     * testClickJackingOnSecureWebServer     
+     * In this case an attacker successfully takes advantage of a clickjacking 
+     * weakness on a vulnerable webserver
+     */
+    
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
+    var model = new WebServerSecurityModel();
+
+    var attacker = new Attacker();
+    attacker.addAttackPoint(model.vulnerableWebServer.attemptClickjacking);
+
+    attacker.attack();
+
+    model.vulnerableWebServer.clickjacking.assertCompromisedInstantaneously();
+  }
+
+  @Test
+  public void testClickJackingOnSecureWebServer() {
+    /*
+     * testClickJackingOnSecureWebServer     
+     * In this case an attacker tries to take advantage of clickjacking on
+     * a secure webserver, but fails
+     */
+    
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
+    var model = new WebServerSecurityModel();
+
+    var attacker = new Attacker();
+    attacker.addAttackPoint(model.fullyPatchedWebServer.attemptClickjacking);
+
+    attacker.attack();
+
+    model.fullyPatchedWebServer.clickjacking.assertUncompromised();
   }
 }

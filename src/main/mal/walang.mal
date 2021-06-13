@@ -25,7 +25,8 @@ category WebSystem {
           -> dosExploit
       & dosExploit
           user info: "A denial-of-service exploit makes the data unavailable."
-          -> data.unavailable
+          -> data.unavailable,
+             webapplication.dos
 
       & attemptRCEExploit
           -> rceExploit
@@ -35,7 +36,12 @@ category WebSystem {
              data.read,
              data.write,
              data.delete,
-             data.unavailable
+             data.unavailable,
+             webapplication.deface,
+             webapplication.dos,
+             webapplication.abusePrivileges,
+             webapplication.infoDisclosure
+
 
       & attemptPrivescExploit
           -> privescExploit
@@ -52,6 +58,39 @@ category WebSystem {
           -> dosExploit,
              rceExploit,
              privescExploit
+
+
+      & attemptSniff
+          -> sniff
+      & sniff
+          user info: "If TLS is disabled, encryption for data is not available."
+          -> dataflows.eavesdrop,
+             dataflows.manInTheMiddle,
+             attemptCookieEavesDrop
+      # encryption
+          user info: "Enabling appropriate encryption prevents all threats associated to transmission of plaintext data."
+          -> sniff
+
+      & attemptClickjacking
+          -> clickjacking
+      & clickjacking
+          user info: "If the X-Frame-Options header is disabled the Web Application is vulnerable to clickjacking attacks."
+      # xFrameOptionsEnabled
+          user info: "If the X-Frame-Options header is enabled the Web Application cannot be embedded into a frame hence it is not vulnerable to clickjacking attacks."
+          -> clickjacking
+
+     
+      & attemptCookieEavesDrop
+          user info: "If cookies are not set with the 'secure' flag, they may be eavesdropped."
+          -> cookieEavesdrop
+      # secureFlagEnabled
+          user info: "If cookies are set with the 'secure' flag, they may not be eavesdropped."
+          -> cookieEavesdrop
+
+      & cookieEavesdrop
+        user info: "If cookies are not set with the 'secure' flag and the web Application is not using TLS then cookies can be eavesdropped."
+
+
   }
 
 
@@ -62,7 +101,7 @@ category WebSystem {
     | write
     | delete
     | unavailable
-    user info: "Unavailable data is equivalent to a Denial-of-Service attack on data."
+        user info: "Unavailable data is equivalent to a Denial-of-Service attack on data."
   }
 
   asset DataFlow 
@@ -156,7 +195,7 @@ category WebSystem {
     | directoryBruteForce
         -> endpoints[HiddenEndpoint].bruteforce,
            endpoints[PrivateEndpoint].bruteforce
-    & clickjacking
+    & dos
     & abusePrivileges
     & infoDisclosure
     & deface
@@ -189,7 +228,7 @@ category WebSystem {
     | discover
         user info: "A discovered input field can be fuzzed by an attacker."
         -> fuzz
-    | fuzz
+    & fuzz
         user info: "Extensive Fuzzing could lead to the exploitation of different vulnerabilities."
         -> sqlinjection,
            xss
@@ -266,31 +305,6 @@ category WebSystem {
   asset WebServerConfiguration 
   user info: "A WebServer has a configuration that can be useful to set some security-related options."
   { 
-    & tlsDisabled
-        user info: "If TLS is disabled, encryption for data is not available."
-        -> webserver.dataflows.eavesdrop,
-           webserver.dataflows.manInTheMiddle,
-           cookieEavesdrop
-    # encryption
-        user info: "Enabling appropriate encryption prevents all threats associated to transmission of plaintext data."
-        -> tlsDisabled
-
-    & xFrameOptionsDisabled
-        user info: "If the X-Frame-Options header is disabled the Web Application is vulnerable to clickjacking attacks."
-        -> webserver.webapplication.clickjacking
-    # xFrameOptionsEnabled
-        user info: "If the X-Frame-Options header is enabled the Web Application cannot be embedded into a frame hence it is not vulnerable to clickjacking attacks."
-        -> xFrameOptionsDisabled
-
-    & secureFlagDisabled
-        user info: "If cookies are not set with the 'secure' flag, they may be eavesdropped."
-        -> cookieEavesdrop
-    # secureFlagEnabled
-        user info: "If cookies are set with the 'secure' flag, they may not be eavesdropped."
-        -> secureFlagDisabled
-
-    & cookieEavesdrop
-        user info: "If cookies are not set with the 'secure' flag and the web Application is not using TLS then cookies can be eavesdropped."
   }
 }
 
@@ -299,7 +313,6 @@ category WebSystem {
 
 associations {
   WebServer[webserver]           1    <--    Hosts          -->    1 [webapplication]WebApplication
-  WebServer[webserver]           1    <--    Configuration  -->    1 [config]WebServerConfiguration
   WebServer[webserver]           1    <--    Transmission   -->    * [dataflows]DataFlow
   WebServer[webserver]           1    <--    RetrieveInfo   -->    * [data]Data
 
