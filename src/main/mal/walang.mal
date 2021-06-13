@@ -54,35 +54,6 @@ category WebSystem {
              privescExploit
   }
 
-  asset WebServerConfiguration 
-  user info: "A WebServer has a configuration that can be useful to set some security-related options."
-  { 
-    & tlsDisabled
-        user info: "If TLS is disabled, encryption for data is not available."
-        -> webserver.dataflows.eavesdrop,
-           webserver.dataflows.manInTheMiddle,
-           cookieEavesdrop
-    # encryption
-        user info: "Enabling appropriate encryption prevents all threats associated to transmission of plaintext data."
-        -> tlsDisabled
-
-    & xFrameOptionsDisabled
-        user info: "If the X-Frame-Options header is disabled the Web Application is vulnerable to clickjacking attacks."
-        -> webserver.webapplication.clickjacking
-    # xFrameOptionsEnabled
-        user info: "If the X-Frame-Options header is enabled the Web Application cannot be embedded into a frame hence it is not vulnerable to clickjacking attacks."
-        -> xFrameOptionsDisabled
-
-    & secureFlagDisabled
-        user info: "If cookies are not set with the 'secure' flag, they may be eavesdropped."
-        -> cookieEavesdrop
-    # secureFlagEnabled
-        user info: "If cookies are set with the 'secure' flag, they may not be eavesdropped."
-        -> secureFlagDisabled
-
-    & cookieEavesdrop
-        user info: "If cookies are not set with the 'secure' flag and the web Application is not using TLS then cookies can be eavesdropped."
-  }
 
   asset Data 
   user info: "Data in this context is generic and represents all the data managed by the Web Application."
@@ -187,8 +158,6 @@ category WebSystem {
     | abusePrivileges
     | infoDisclosure
     | deface
-    
-
   }
 
 
@@ -291,6 +260,35 @@ category WebSystem {
         -> account.tokens.obtain
   }
 
+  asset WebServerConfiguration 
+  user info: "A WebServer has a configuration that can be useful to set some security-related options."
+  { 
+    & tlsDisabled
+        user info: "If TLS is disabled, encryption for data is not available."
+        -> webserver.dataflows.eavesdrop,
+           webserver.dataflows.manInTheMiddle,
+           cookieEavesdrop
+    # encryption
+        user info: "Enabling appropriate encryption prevents all threats associated to transmission of plaintext data."
+        -> tlsDisabled
+
+    & xFrameOptionsDisabled
+        user info: "If the X-Frame-Options header is disabled the Web Application is vulnerable to clickjacking attacks."
+        -> webserver.webapplication.clickjacking
+    # xFrameOptionsEnabled
+        user info: "If the X-Frame-Options header is enabled the Web Application cannot be embedded into a frame hence it is not vulnerable to clickjacking attacks."
+        -> xFrameOptionsDisabled
+
+    & secureFlagDisabled
+        user info: "If cookies are not set with the 'secure' flag, they may be eavesdropped."
+        -> cookieEavesdrop
+    # secureFlagEnabled
+        user info: "If cookies are set with the 'secure' flag, they may not be eavesdropped."
+        -> secureFlagDisabled
+
+    & cookieEavesdrop
+        user info: "If cookies are not set with the 'secure' flag and the web Application is not using TLS then cookies can be eavesdropped."
+  }
 }
 
 associations {
