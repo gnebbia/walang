@@ -116,7 +116,7 @@ category WebSystem {
   }
 
   asset HiddenEndpoint extends Endpoint 
-  user info: "A HiddenEndpoint is a resource or an URL within a Web Application that cannot be found by crawling.."
+  user info: "A HiddenEndpoint is a resource or an URL within a Web Application that cannot be found by crawling."
   developer info: "An example may be a URL not linked anywhere in the web application."
   { 
     | bruteforce [Exponential(0.02)]
@@ -137,11 +137,13 @@ category WebSystem {
            connect
     & access
         +> privilegeMisconfiguration
+
+    & privilegeMisconfiguration
+        -> account.infoDisclosure
+
     # enforceAccessControl
     user info: "Enforcing Access Control prevents Broken Authorization weaknesses."
         -> access
-    | privilegeMisconfiguration
-        -> account.infoDisclosure
   }
 
 
@@ -154,10 +156,10 @@ category WebSystem {
     | directoryBruteForce
         -> endpoints[HiddenEndpoint].bruteforce,
            endpoints[PrivateEndpoint].bruteforce
-    | clickjacking
-    | abusePrivileges
-    | infoDisclosure
-    | deface
+    & clickjacking
+    & abusePrivileges
+    & infoDisclosure
+    & deface
   }
 
 
