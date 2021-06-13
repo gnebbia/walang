@@ -192,6 +192,7 @@ category WebSystem {
         -> sqlinjection,
            xss
 
+    // For reasons of brevity only SQLInjection and XSS have been considered
     & sqlinjection [Exponential(0.02)]
         user info: "SQL Injection allows access to the database associated to the Web Application."
         -> dbs.read,
@@ -290,6 +291,9 @@ category WebSystem {
         user info: "If cookies are not set with the 'secure' flag and the web Application is not using TLS then cookies can be eavesdropped."
   }
 }
+
+
+
 
 associations {
   WebServer[webserver]           1    <--    Hosts          -->    1 [webapplication]WebApplication
