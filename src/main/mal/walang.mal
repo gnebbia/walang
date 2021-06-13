@@ -21,28 +21,37 @@ category WebSystem {
   asset WebServer 
   user info: "The WebServer hosting the Web Application."
   { 
-      | dosVulnerability
-          user info: "A denial-of-service vulnerability makes the data unavailable."
+      & attemptDOSExploit
+          -> dosExploit
+      & dosExploit
+          user info: "A denial-of-service exploit makes the data unavailable."
           -> data.unavailable
 
-      | rceVulnerability
-          user info: "A remote code execution vulnerability allows to execute commands on the webserver."
+      & attemptRCEExploit
+          -> rceExploit
+      & rceExploit
+          user info: "A remote code execution exploit allows to execute commands on the webserver."
           -> privilegedCodeExecution,
              data.read,
              data.write,
              data.delete,
              data.unavailable
 
-      | privescVulnerability
-          user info: "A privilege escalation vulnerability allows to execute commands as the administrator (e.g., root)."
+      & attemptPrivescExploit
+          -> privescExploit
+
+      & privescExploit
+          user info: "A privilege escalation exploit allows to execute commands as the administrator (e.g., root)."
           -> privilegedCodeExecution
-      # fullyPatchedWebServer
-          user info: "If the server is fully patched then it is not vulnerable to known weaknesses."
-          -> dosVulnerability,
-             rceVulnerability
 
       & privilegedCodeExecution
           user info: "A privileged code execution is obtained only if there is a remote code execution vulnerability coupled with a Privilege Escalation vulnerability"
+
+      # fullyPatchedWebServer
+          user info: "If the server is fully patched then it is not vulnerable to known weaknesses."
+          -> dosExploit,
+             rceExploit,
+             privescExploit
   }
 
   asset WebServerConfiguration 
@@ -119,16 +128,6 @@ category WebSystem {
   asset Endpoint
   user info: "An endpoint is a resource or a URL within a Web Application."
   {
-    | discover
-        -> access,
-           connect
-    # notLinked
-        -> discover
-
-    | attemptBruteforce
-        -> bruteforce
-    | bruteforce [Exponential(0.02)]
-        -> connect
 
     | connect
         -> access
@@ -137,10 +136,34 @@ category WebSystem {
         -> inputfields.discover
   }
 
+  asset LinkedEndpoint extends Endpoint
+  user info: "A LinkedEndpoint is a resource or a URL within a Web Application that can be found by crawling."
+  {
+    | discover
+        -> access,
+           connect
+  }
+
+  asset HiddenEndpoint extends Endpoint 
+  user info: "A HiddenEndpoint is a resource or an URL within a Web Application that cannot be found by crawling.."
+  developer info: "An example may be a URL not linked anywhere in the web application."
+  { 
+    | bruteforce [Exponential(0.02)]
+        -> discover
+    & discover
+        -> access,
+           connect
+  }
+
   asset PrivateEndpoint extends Endpoint 
   user info: "A PrivateEndpoint is a resource or an URL within a Web Application accessible only to a specific logged-on user."
   developer info: "An example may be an URL containing sensitive info related to the logged-on user."
   { 
+    | bruteforce [Exponential(0.02)]
+        -> discover
+    & discover
+        -> access,
+           connect
     & access
         +> privilegeMisconfiguration
     # enforceAccessControl
@@ -155,12 +178,11 @@ category WebSystem {
   user info: "The Web Application under exam."
   { 
     | crawl
-        -> endpoints.discover,
+        -> endpoints[LinkedEndpoint].discover,
            adminarea.discover
     | directoryBruteForce
-        -> endpoints.discover,
-           adminarea.discover,
-           endpoints[PrivateEndpoint].discover
+        -> endpoints[HiddenEndpoint].bruteforce,
+           endpoints[PrivateEndpoint].bruteforce
     | clickjacking
     | abusePrivileges
     | infoDisclosure

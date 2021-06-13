@@ -38,7 +38,7 @@ public class TestSQLInjection extends WaLangTest {
   @Test
   public void testFuzzSQLInjection() {
     /*
-     * FuzzSQLInjection
+     * TestFuzzSQLInjection
      * In this case an attacker has direct access to an endpoint
      * discovers one of its input fields, tries to fuzz
      * and can perform SQL-Injection with some effort

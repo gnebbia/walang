@@ -38,7 +38,7 @@ public class TestXSS extends WaLangTest {
   @Test
   public void testFuzzXSS() {
     /*
-     * FuzzXSS
+     * TestFuzzXSS
      * In this case an attacker has direct access to an endpoint
      * discovers one of its input fields, tries to fuzz
      * and can perform XSS with some effort
@@ -56,6 +56,5 @@ public class TestXSS extends WaLangTest {
 
     model.iFieldSearch.xss.assertCompromisedWithEffort();
   }
-
 
 }

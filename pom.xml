@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-Copyright 2020 Foreseeti AB
+Copyright 2020 Giuseppe Nebbione
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ limitations under the License.
   <packaging>jar</packaging>
 
   <name>walang</name>
-  <description>A MAL language that demonstrates the Maven project structure</description>
+  <description>A draft MAL language for Web Application Threat Modeling</description>
   <url>https://github.com/gnebbia/walang</url>
   <inceptionYear>2020</inceptionYear>
   <organization>
-    <name>Foreseeti AB</name>
-    <url>https://www.foreseeti.com/</url>
+    <name>Giuseppe Nebbione</name>
+    <url>https://www.gnebbia.ml/</url>
   </organization>
   <licenses>
     <license>
@@ -40,15 +40,15 @@ limitations under the License.
 
   <developers>
     <developer>
-      <id>maxwalls</id>
-      <name>Max Wällstedt</name>
-      <email>max.wallstedt@foreseeti.com</email>
-      <organization>foreseeti</organization>
-      <organizationUrl>https://www.foreseeti.com/</organizationUrl>
+      <id>gnebbia</id>
+      <name>Giuseppe Nebbione</name>
+      <email>nebbionegiuseppe@gmail.com</email>
+      <organization>UniPV</organization>
+      <organizationUrl>https://gnebbia.ml/</organizationUrl>
       <roles>
         <role>developer</role>
       </roles>
-      <timezone>Europe/Stockholm</timezone>
+      <timezone>Europe/Rome</timezone>
     </developer>
   </developers>
 
