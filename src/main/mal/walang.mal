@@ -78,7 +78,7 @@ category WebSystem {
            dataInTransit.write,
            dataInTransit.delete
 
-    | denialOfService
+    & denialOfService
         user info: "A denial-of-service attack on the dataflow makes the contained data inaccessible."
         -> dataInTransit.delete
   }
