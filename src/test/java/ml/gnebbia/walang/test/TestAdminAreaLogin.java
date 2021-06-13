@@ -28,8 +28,8 @@ public class TestAdminAreaLogin extends WaLangTest {
     public final Administrator admin1 = new Administrator("admin1");
     public final Password admin1pass = new Password("password123");
 
-    public final User user2 = new User("andrea");
-    public final Password user2pass = new Password("p4ssw0rd");
+    public final Account account2 = new Account("andrea");
+    public final Password account2pass = new Password("p4ssw0rd");
 
     public AdminAreaLoginModel() {
       server.addWebapplication(app);

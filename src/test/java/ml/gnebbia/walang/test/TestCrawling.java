@@ -31,6 +31,18 @@ public class TestCrawling extends WaLangTest {
     public final HiddenEndpoint adminEndpoint = new HiddenEndpoint("/admin.jsp");
     public final HiddenEndpoint robotsEndpoint = new HiddenEndpoint("/robots.txt");
 
+    // The following endpoint is NOT linked within the web application and corresponds to a private resource for a specific logged-on account
+    public final Account account1 = new Account("User123");
+    public final Password passAccount1 = new Password("1qaz2wsx");
+
+    boolean accessControlEnforced = true;
+    // Correctly configured access control mechanism on the following resource
+    public final PrivateEndpoint userPrivateHome = new PrivateEndpoint("/user/123/home.jsp", accessControlEnforced);
+
+    // A misconfigured access control mechanism on the following resource
+    public final PrivateEndpoint userPrivateInfo = new PrivateEndpoint("/user/123/details.jsp", !accessControlEnforced);
+
+
 
     public CrawlingModel() {
       server.addWebapplication(app);
@@ -38,6 +50,14 @@ public class TestCrawling extends WaLangTest {
       app.addEndpoints(searchEndpoint);
       app.addEndpoints(adminEndpoint);
       app.addEndpoints(robotsEndpoint);
+      app.addEndpoints(userPrivateInfo);
+      app.addEndpoints(userPrivateHome);
+
+      app.addAccounts(account1);
+      account1.addTokens(passAccount1);
+
+      account1.addPrivateurls(userPrivateHome);
+      account1.addPrivateurls(userPrivateInfo);
     }
   }
 
@@ -95,6 +115,47 @@ public class TestCrawling extends WaLangTest {
 
     attacker.attack();
 
-    model.adminEndpoint.access.assertCompromisedWithEffort();
+    model.adminEndpoint.discover.assertCompromisedWithEffort();
   }
+
+  @Test
+  public void testIDOR() {
+    /*
+     * TestIDOR
+     * In this case an attacker tries to bruteforce a web application
+     * and with some effort discovers a hidden endpoint and is able
+     * to access the resource due to misconfigured access control mechanisms
+     */
+    
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
+    var model = new CrawlingModel();
+
+    var attacker = new Attacker();
+    attacker.addAttackPoint(model.app.directoryBruteForce);
+
+    attacker.attack();
+
+    model.userPrivateInfo.attemptAccess.assertCompromisedWithEffort();
+  }
+
+  @Test
+  public void testIDORPrevented() {
+    /*
+     * TestIDORPrevented
+     * In this case an attacker tries to bruteforce a web application
+     * and with some effort discovers a hidden endpoint but is not able to access
+     * it due to correct authorization mechanisms enforced
+     */
+    
+    System.out.println("### Running Test: " + Thread.currentThread().getStackTrace()[1].getMethodName());
+    var model = new CrawlingModel();
+
+    var attacker = new Attacker();
+    attacker.addAttackPoint(model.app.directoryBruteForce);
+
+    attacker.attack();
+
+    model.userPrivateHome.attemptAccess.assertCompromisedWithEffort();
+  }
+
 }

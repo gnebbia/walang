@@ -171,18 +171,23 @@ category WebSystem {
   { 
     | bruteforce [Exponential(0.02)]
         -> discover
-    & discover
-        -> access,
-           connect
-    & access
-        +> privilegeMisconfiguration
 
-    & privilegeMisconfiguration
+    & discover
+        -> attemptAccess
+
+    & authenticate
+        -> connect,
+           access
+
+    & attemptAccess
+        -> accessWithoutCredentials
+
+    & accessWithoutCredentials
         -> account.infoDisclosure
 
     # enforceAccessControl
     user info: "Enforcing Access Control prevents Broken Authorization weaknesses."
-        -> access
+        -> accessWithoutCredentials
   }
 
 
@@ -190,14 +195,23 @@ category WebSystem {
   user info: "The Web Application under exam."
   { 
     | crawl
+        user info: "Crawling allows the mapping of the publicly exposed Web Application surface."
         -> endpoints[LinkedEndpoint].discover,
            adminarea.discover
     | directoryBruteForce
+        user info: "Directory brute-forcing is used to discover resources which are not directly linked within the Web Application."
         -> endpoints[HiddenEndpoint].bruteforce,
-           endpoints[PrivateEndpoint].bruteforce
+           endpoints[PrivateEndpoint].bruteforce,
+           adminarea.discover
+    | accountEnumeration
+        -> accounts.getUserName
+
     & dos
+        user info: "The Web Application is under a denial of service attack."
     & abusePrivileges
+        user info: "Either horizontal or vertical privilege escalation is performed within the application, this allows a user to perform actions impersonating another user."
     & infoDisclosure
+        user info: "Information about the web application or about its users is disclosed (e.g., source code/database)."
     & deface
   }
 
@@ -250,8 +264,6 @@ category WebSystem {
 
   }
 
-
-
   asset AdminArea
   user info: "An AdminArea represents the area of Application where administrators its administrators can log-in."
   {
@@ -278,13 +290,27 @@ category WebSystem {
   asset Account
   user info: "An Account represents something that can be used to log-in."
   {
+    & getUserName
+        user info: "The Web Application allows getting the username of its users."
+    # noUserHints
+        user info: "The Web Application uses generic error messages and other appropriate mitigations to prevent enumeration of the username."
+        -> getUserName
     | authenticate
         -> privateinfo.read,
            privateinfo.write,
-           privateinfo.delete
+           privateinfo.delete,
+           accessPrivateResources
     | infoDisclosure
         user info: "Information Disclosure in this context not only allows to read private information but also to access private resources of a user."
         -> privateinfo.read
+
+    & accessPrivateResources
+        -> privateurls.access
+
+    | attemptPhishing
+        -> phish
+    | phish [Exponential(0.1)]
+        -> tokens.obtain
   }
 
   asset Administrator extends Account
@@ -293,19 +319,6 @@ category WebSystem {
     // intentionally left blank
   }
 
-  asset User 
-  user info: "A User uses the Web Application by using an account."
-  {
-    | attemptPhishing
-        -> phish
-    | phish [Exponential(0.1)]
-        -> account.tokens.obtain
-  }
-
-  asset WebServerConfiguration 
-  user info: "A WebServer has a configuration that can be useful to set some security-related options."
-  { 
-  }
 }
 
 
@@ -320,6 +333,7 @@ associations {
   WebApplication[webapplication] 1    <--    Compose        -->    * [endpoints]Endpoint
   WebApplication[webapplication] 1    <--    Administration -->    1 [adminarea]AdminArea
   WebApplication[webapplication] 1    <--    Containment    -->    * [inputfields]InputField
+  WebApplication[webapplication] 1    <--    Usage          -->    * [accounts]Account
 
   Endpoint[url]                  1    <--    Containment    -->    * [inputfields]InputField
 
@@ -329,8 +343,6 @@ associations {
 
   AdminArea[adminarea]           1    <--    Administration -->    * [administrators]Administrator
 
-  User[user]                     1    <--    UserAccount    -->    1 [account]Account
-  
   Account[account]               1    <--    Credentials    -->    * [tokens]SecurityToken
   Account[account]               1    <--    Resources      -->    * [privateurls]PrivateEndpoint
   Account[account]               1    <--    Resources      -->    * [privateinfo]Data
