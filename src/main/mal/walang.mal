@@ -19,9 +19,27 @@
 category WebSystem {
 
   asset WebServer 
-  user info: "A WebServer hosts a Web Application."
+  user info: "The WebServer hosting the Web Application."
   { 
-    | compromise
+      | dosVulnerability
+          user info: "A denial-of-service vulnerability makes the data unavailable."
+          -> data.unavailable
+      | rceVulnerability
+          user info: "A remote code execution vulnerability allows to execute commands on the webserver."
+          -> privilegedCodeExecution,
+             data.read,
+             data.write,
+             data.delete,
+             data.unavailable
+      | privescVulnerability
+          user info: "A privilege escalation vulnerability allows to execute commands as the administrator (e.g., root)."
+          -> privilegedCodeExecution
+      # fullyPatchedWebServer
+          user info: "If the server is fully patched then it is not vulnerable to known weaknesses."
+          -> dosVulnerability,
+             rceVulnerability
+      & privilegedCodeExecution
+          user info: "A privileged code execution is obtained only if there is a remote code execution vulnerability coupled with a Privilege Escalation vulnerability"
   }
 
   asset WebServerConfiguration 
@@ -37,28 +55,28 @@ category WebSystem {
         -> tlsDisabled
 
     | xssProtectionDisabled
-        user info: "If the X-XSS-Protection header is disabled the web application may be more likely open to XSS attacks"
+        user info: "If the X-XSS-Protection header is disabled the web Application may be more likely open to XSS attacks"
         -> webserver.webapplication.xss
     # xssProtectionEnabled
-        user info: "If the X-XSS-Protection header is enabled the web application is protected from certain kinds of XSS attacks."
+        user info: "If the X-XSS-Protection header is enabled the web Application is protected from certain kinds of XSS attacks."
         -> xssProtectionDisabled
 
     | xFrameOptionsDisabled
-        user info: "If the X-Frame-Options header is disabled the web application is vulnerable to clickjacking attacks"
+        user info: "If the X-Frame-Options header is disabled the Web Application is vulnerable to clickjacking attacks."
         -> webserver.webapplication.clickjacking
     # xFrameOptionsEnabled
-        user info: "If the X-Frame-Options header is enabled the web application cannot be embedded into a frame hence it is not vulnerable to clickjacking attacks"
+        user info: "If the X-Frame-Options header is enabled the Web Application cannot be embedded into a frame hence it is not vulnerable to clickjacking attacks."
         -> xFrameOptionsDisabled
 
     | secureFlagDisabled
-        user info: "If cookies are not set with the 'secure' flag, they may be eavesdropped"
+        user info: "If cookies are not set with the 'secure' flag, they may be eavesdropped."
         -> cookieEavesdrop
     # secureFlagEnabled
-        user info: "If cookies are set with the 'secure' flag, they may not be eavesdropped"
+        user info: "If cookies are set with the 'secure' flag, they may not be eavesdropped."
         -> secureFlagDisabled
 
     & cookieEavesdrop
-        user info: "If cookies are not set with the 'secure' flag and the web application is not using TLS then cookies can be eavesdropped"
+        user info: "If cookies are not set with the 'secure' flag and the web Application is not using TLS then cookies can be eavesdropped."
   }
 
   asset Data 
@@ -67,6 +85,8 @@ category WebSystem {
     | read
     | write
     | delete
+    | unavailable
+    user info: "Unavailable data is equivalent to a Denial-of-Service attack on data."
   }
 
   asset DataFlow 
@@ -89,44 +109,57 @@ category WebSystem {
   user info: "A DataBase contains data that is at rest."
   { 
     | read
-        -> data.read
+        -> databaseData.read
     | write
-        -> data.write
+        -> databaseData.write
     | delete
-        -> data.delete
+        -> databaseData.delete
   }
 
-  asset URL 
-  user info: "A URL is an endpoint within a Web Application."
+  asset Endpoint
+  user info: "An endpoint is a resource or an URL within a Web Application."
   {
-    // intentionally left blank
-  }
-
-  asset PrivateURL extends URL 
-  user info: "A Private URL is an URL within a Web Application accessible only to a specific logged-on user. An example may be an URL containing sensitive info related to the logged-on user."
-  { 
     | discover
         -> access,
            connect
     | connect
         -> access
     & access
-// add unprivileged access attack here
+        -> inputfields.discover
+  }
+
+  asset PrivateEndpoint extends Endpoint 
+  user info: "A PrivateEndpoint is a resource or an URL within a Web Application accessible only to a specific logged-on user."
+  developer info: "An example may be an URL containing sensitive info related to the logged-on user."
+  { 
+     
+    & access
+        -> privilegeMisconfiguration
+    | privilegeMisconfiguration
+        -> account.infoDisclosure
   }
 
 
   asset WebApplication
   user info: "The Web Application under exam."
   { 
-    | read
+    | crawl
+        -> endpoints.discover,
+           adminarea.discover
+    | directoryBruteForce
+        -> endpoints.discover,
+           adminarea.discover,
+           endpoints[PrivateEndpoint].discover
     | clickjacking
     | xss
     | abusePrivileges
+    | infoDisclosure
+    | deface
   }
 
 
   asset SecurityToken
-  user info: "A security token can be used to manage access control for users within the web application."
+  user info: "A security token can be used to manage access control for users within the Web Application."
   {
     | obtain
       -> account.authenticate
@@ -156,29 +189,29 @@ category WebSystem {
         -> sqlinjection,
            xss
     | sqlinjection [Exponential(0.02)]
-        user info: "SQL Injection allows access to the database associated to the web application."
-        -> url.webapplication.dbs.read,
-           url.webapplication.dbs.write,
-           url.webapplication.dbs.delete
+        user info: "SQL Injection allows access to the database associated to the Web Application."
+        -> dbs.read,
+           dbs.write,
+           dbs.delete
     | xss [Exponential(0.02)]
         user info: "XSS allows to abuse privileges related to other users."
-        -> url.webapplication.abusePrivileges
+        -> webapplication.abusePrivileges
   }
 
 
 
-  asset Resource
-  user info: "An InputField represents everything that can be manipulated by the user, such as parameters of HTTP requests or form fields contained in web pages."
-  { 
-    // intentionally left blank
-  }
+  // asset Resource
+  // user info: "A resource represents a file, a webpage or any other media that can be accessed from the Web Application."
+  // { 
+  //   // intentionally left blank
+  // }
 
 
   asset AdminArea 
   user info: "An AdminArea represents the area of Application where administrators its administrators can log-in."
   {
     | discover
-        user info: "Sometimes Admin Areas are hidden and must be discovered to be accessed"
+        user info: "Sometimes Admin Areas are hidden and must be discovered to be accessed."
         -> access,
            connect
     | connect
@@ -189,13 +222,22 @@ category WebSystem {
         -> guessedPassword
     | guessedPassword [Exponential(0.02)]
         -> administrators.authenticate
+    # twoFactorAuthentication
+        -> guessedPassword
     & access
+        -> webapplication.deface,
+           webapplication.abusePrivileges,
+           webapplication.infoDisclosure
   }
 
   asset Account
   user info: "An Account represents something that can be used to log-in."
   {
     | authenticate
+    | impersonate
+    // maybe add abuseprivileges?
+    | infoDisclosure
+    // maybe add data.read ??
   }
 
   asset Administrator extends Account
@@ -220,32 +262,32 @@ associations {
 
   WebServer[webserver]           1    <--    Configuration  -->    1 [config]WebServerConfiguration
   WebServer[webserver]           1    <--    Transmission   -->    * [dataflows]DataFlow
+  WebServer[webserver]           1    <--    RetrieveInfo   -->    * [data]Data
 
 
-  WebApplication[webapplication] 1    <--    Compose        -->    * [urls]URL
-  WebApplication[webapplication] 1    <--    DataStore      -->    * [dbs]DataBase
+  WebApplication[webapplication] 1    <--    Compose        -->    * [endpoints]Endpoint
 
-  WebApplication[webapplication] 1    <--    Usage          -->    * [users]User
-  WebApplication[webapplication] 1    <--    Administered   -->    1 [adminarea]AdminArea
+  WebApplication[webapplication] 1    <--    Administration -->    1 [adminarea]AdminArea
+  WebApplication[webapplication] 1    <--    Containment    -->    * [inputfields]InputField
 
-  URL[url]                       1    <--    Contains       -->    * [inputfields]InputField
-  URL[url]                       1    <--    Owns           -->    * [resources]Resource
+  Endpoint[url]                  1    <--    Contains       -->    * [inputfields]InputField
+
+
+  InputField[inputfield]         1    <--    Interact       -->    * [dbs]DataBase
+
 
   AdminArea[adminarea]           1    <--    Administration -->    * [administrators]Administrator
 
   User[user]                     1    <--    UserAccount    -->    1 [account]Account
-  User[user]                     1    <--    Communication  -->    1 [dataflow]DataFlow
   
   Account[account]               1    <--    Credentials    -->    * [tokens]SecurityToken
-  Account[account]               1    <--    Resources      -->    * [privateurls]PrivateURL
+  Account[account]               1    <--    Resources      -->    * [privateurls]PrivateEndpoint
 
   DataFlow[dataflow]             1    <--    Transmission   -->    * [data]Data
-  DataBase[db]                   1    <--    DataStore      -->    * [data]Data
+  DataBase[db]                   1    <--    DataStore      -->    * [databaseData]Data
 }
 
 
 
-
-// [ANALYZER ERROR] <walang.mal:111:12> Field 'dbs' not defined for asset 'InputField'
-// [ANALYZER ERROR] <walang.mal:112:12> Field 'dbs' not defined for asset 'InputField'
-// [ANALYZER ERROR] <walang.mal:113:12> Field 'dbs' not defined for asset 'InputField'
+// [ANALYZER WARNING] <walang.mal:274:3> Association 'Endpoint [url] <-- Contains --> InputField [inputfields]' is never used
+// [ANALYZER WARNING] <walang.mal:283:3> Association 'User [user] <-- Transmission --> DataFlow [dataflow]' is never used
