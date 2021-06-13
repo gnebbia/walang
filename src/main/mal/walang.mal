@@ -241,8 +241,6 @@ category WebSystem {
 
 
 
-
-
   asset AdminArea
   user info: "An AdminArea represents the area of Application where administrators its administrators can log-in."
   {
